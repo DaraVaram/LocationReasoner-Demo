@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/styles.css">
 </head>
-<body data-theme="dark">
+<body data-theme="dark" data-view="consumer">
 
 <div id="app">
   <aside id="side-panels">
@@ -20,6 +20,10 @@
         <div class="brand-subtitle">Boston Site Selection</div>
       </div>
       <div class="header-actions">
+        <div class="view-toggle" title="Consumer hides ground-truth / ML internals">
+          <button class="vt-btn active" id="btn-view-consumer" type="button">Consumer</button>
+          <button class="vt-btn" id="btn-view-ml" type="button">ML</button>
+        </div>
         <button class="btn btn-ghost" id="theme-toggle" type="button">Toggle theme</button>
       </div>
     </header>
@@ -33,10 +37,12 @@
           </div>
           <div class="panel-controls">
             <select id="model-select" class="select">
-              <option value="deepseek-chat" selected>deepseek-chat</option>
+              <option value="gpt-4o" selected>gpt-4o</option>
+              <option value="gpt-4o-mini">gpt-4o-mini</option>
+              <option value="deepseek-chat">deepseek-chat</option>
               <option value="deepseek-reasoner">deepseek-reasoner</option>
             </select>
-            <select id="strategy-select" class="select">
+            <select id="strategy-select" class="select ml-only">
               <option value="direct" selected>direct</option>
               <option value="react">react</option>
               <option value="reflexion">reflexion</option>
@@ -44,7 +50,7 @@
           </div>
         </div>
 
-        <div class="stepper">
+        <div class="stepper ml-only">
           <div class="step pending" data-step="data">
             <div class="step-title">1. Data check</div>
             <div class="step-meta" id="step-data-meta">Pending</div>
@@ -59,9 +65,9 @@
           </div>
         </div>
 
-        <div class="chat-log" id="chat-log"></div>
+        <div class="chat-log ml-only" id="chat-log"></div>
 
-        <div class="spec-panel" id="spec-panel">
+        <div class="spec-panel ml-only" id="spec-panel">
           <div class="spec-header">
             <div class="spec-title">Spec preview</div>
             <div class="pill" id="spec-status">Awaiting</div>
@@ -79,7 +85,7 @@
         </div>
       </section>
 
-      <section class="panel results-card">
+      <section class="panel results-card ml-only">
         <div class="panel-header">
           <div>
             <div class="panel-title">Results</div>
@@ -117,6 +123,17 @@
         </div>
       </section>
 
+      <section class="panel context-card" id="context-section" style="display:none">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">Ranked by <span id="context-priority" class="context-priority">context</span></div>
+            <div class="panel-subtitle" id="context-subtitle">LLM reasoning over your stated priority</div>
+          </div>
+          <span class="pill pill-context" id="context-pill">priority</span>
+        </div>
+        <div id="context-list"></div>
+      </section>
+
       <section class="panel zone-rank-card" id="zone-rank-section" style="display:none">
         <div class="panel-header">
           <div>
@@ -124,11 +141,11 @@
             <div class="panel-subtitle" id="zr-subtitle">Closest matches to your query</div>
           </div>
           <div class="panel-controls">
-            <div class="rank-mode-toggle">
+            <div class="rank-mode-toggle ml-only">
               <button class="rmt-btn active" id="btn-mode-formula" onclick="setRankMode('formula')">Rank by Formula</button>
               <button class="rmt-btn" id="btn-mode-llm" onclick="setRankMode('llm')">Rank by LLM</button>
             </div>
-<span class="pill pill-muted" id="spearman-badge" style="display:none">&#961; = &#8211;</span>
+            <span class="pill pill-muted ml-only" id="spearman-badge" style="display:none">&#961; = &#8211;</span>
           </div>
         </div>
         <div id="no-gt-banner" class="no-gt-banner" style="display:none">
@@ -141,7 +158,7 @@
         <div id="zone-rank-list"></div>
       </section>
 
-      <section class="panel code-card" id="code-section">
+      <section class="panel code-card ml-only" id="code-section">
         <div class="panel-header">
           <div>
             <div class="panel-title">Generated code</div>
@@ -151,7 +168,7 @@
         <pre class="code-block" id="generated-code"></pre>
       </section>
 
-      <section class="panel agent-card" id="agent-section">
+      <section class="panel agent-card ml-only" id="agent-section">
         <div class="panel-header">
           <div>
             <div class="panel-title">Agent trace</div>
@@ -173,15 +190,34 @@
 
   <div id="map-wrap">
     <div id="map"></div>
+    <div class="zone-info-card" id="zone-info-card" style="display:none">
+      <button class="zic-close" id="zic-close" type="button" aria-label="Close">&times;</button>
+      <div class="zic-title" id="zic-title">Zone</div>
+      <div class="zic-address" id="zic-address">Locating…</div>
+      <div class="zic-weather" id="zic-weather"></div>
+      <div class="zic-score" id="zic-score"></div>
+      <div class="zic-context" id="zic-context"></div>
+      <div class="zic-constraints" id="zic-constraints"></div>
+      <div class="zic-highlights" id="zic-highlights"></div>
+    </div>
     <div class="legend" id="map-legend">
       <div class="legend-title">Map legend</div>
       <div id="legend-standard">
         <div class="legend-item"><span class="legend-color" style="background: rgba(200,200,200,0.25)"></span><span>All zones</span></div>
-        <div class="legend-item"><span class="legend-color" style="background: rgba(34,122,246,0.65)"></span><span>GT filter</span></div>
-        <div class="legend-item"><span class="legend-color" style="background: rgba(133,86,255,0.6)"></span><span>LLM filter</span></div>
-        <div class="legend-item"><span class="legend-color" style="background: rgba(29,154,108,0.7)"></span><span>True positive</span></div>
-        <div class="legend-item"><span class="legend-color" style="background: rgba(224,82,82,0.7)"></span><span>False positive</span></div>
-        <div class="legend-item"><span class="legend-color" style="background: rgba(38,70,83,0.7)"></span><span>False negative</span></div>
+        <div class="legend-item ml-only"><span class="legend-color" style="background: rgba(34,122,246,0.65)"></span><span>GT filter</span></div>
+        <div class="legend-item ml-only"><span class="legend-color" style="background: rgba(133,86,255,0.6)"></span><span>LLM filter</span></div>
+        <div class="legend-item ml-only"><span class="legend-color" style="background: rgba(29,154,108,0.7)"></span><span>True positive</span></div>
+        <div class="legend-item ml-only"><span class="legend-color" style="background: rgba(224,82,82,0.7)"></span><span>False positive</span></div>
+        <div class="legend-item ml-only"><span class="legend-color" style="background: rgba(38,70,83,0.7)"></span><span>False negative</span></div>
+      </div>
+      <div id="legend-match" style="display:none">
+        <div class="legend-item"><span class="legend-color" style="background:#1d9a6c"></span><span>Matches your query</span></div>
+      </div>
+      <div id="legend-context" style="display:none">
+        <div class="legend-item"><span class="legend-color" style="background:#1d9a6c"></span><span>Strong fit (75+)</span></div>
+        <div class="legend-item"><span class="legend-color" style="background:#4ecb9e"></span><span>Good (50–74)</span></div>
+        <div class="legend-item"><span class="legend-color" style="background:#f4b06b"></span><span>Moderate (25–49)</span></div>
+        <div class="legend-item"><span class="legend-color" style="background:#f0a3a3"></span><span>Weak (&lt;25)</span></div>
       </div>
       <div id="legend-ranked" style="display:none">
         <div class="legend-item"><span class="legend-color" style="background: #1d9a6c"></span><span>100% satisfied</span></div>

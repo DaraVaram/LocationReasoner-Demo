@@ -1,7 +1,16 @@
-flask
-flask-cors
-openai
-pandas
-numpy
-pyarrow
-h3
+# LocationReasoner demos — dependencies
+# Pinned to the versions in the working `site_selection` conda env (Python 3.10).
+# The new zone-info feature (address + weather) uses only the Python standard
+# library (urllib), so it adds no dependency here.
+
+flask==3.0.0
+flask-cors==4.0.0
+openai==2.16.0
+pandas==2.1.4
+numpy==1.26.2
+pyarrow==14.0.1
+
+# Optional: only needed if you REGENERATE the H3 zone grid via
+# abu_dhabi/src/zones_h3.py. Not required to run the demos — the zone data is
+# already baked into each city's data/ folder.
+h3==4.4.2

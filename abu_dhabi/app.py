@@ -28,7 +28,8 @@ from src.codegen_executor import codegen_evaluate
 from src.agent_tools import build_tool_registry
 from src.react_agent import react_evaluate
 from src.reflexion_agent import reflexion_evaluate
-from src.ranking import rank_zones, llm_rank_zones, spearman_rho
+from src.ranking import rank_zones, llm_rank_zones, spearman_rho, contextual_rank_zones
+from src import enrich
 
 app = Flask(__name__, static_folder="static")
 CORS(app)
@@ -171,6 +172,43 @@ def _spec_from_nl(nl_query: str, model: str) -> dict:
 
     raw = _strip_code_fences(raw)
     return _normalize_spec(json.loads(raw))
+
+
+def _extract_context(nl_query: str, model: str) -> Dict[str, Any]:
+    """Detect an optional persona / priority dimension the user wants zones ranked by
+    (e.g. greenery, tourism access, accessibility). Returns {"priority", "persona"}."""
+    if model.startswith("deepseek"):
+        client = deepseek_client or openai_client
+    else:
+        client = openai_client or deepseek_client
+    if not client:
+        return {"priority": None, "persona": None}
+    sys_prompt = (
+        "You read a site-selection request and extract the user's stated PREFERENCE or "
+        "PRIORITY for ranking candidate locations — the qualitative thing they care about "
+        "beyond the hard filters. Examples: greenery, tourism access, walkability, nightlife, "
+        "quietness, family-friendliness, accessibility, temperature.\n"
+        'Return JSON: {"priority": string|null, "persona": string|null}. '
+        "'priority' is a short phrase (e.g. 'greenery'); 'persona' is the user's self-description "
+        "if any (e.g. 'urban designer who cares about greenery'). If the request states no "
+        "preference beyond the hard constraints, return null for both."
+    )
+    try:
+        resp = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "system", "content": sys_prompt},
+                      {"role": "user", "content": nl_query}],
+            temperature=0.0, max_tokens=200,
+            response_format={"type": "json_object"},
+        )
+        data = json.loads(_strip_code_fences(resp.choices[0].message.content.strip()))
+        priority = data.get("priority")
+        persona = data.get("persona")
+        if isinstance(priority, str) and priority.strip():
+            return {"priority": priority.strip(), "persona": (persona or "").strip() or None}
+    except Exception as exc:
+        print(f"[context] extraction failed: {exc}")
+    return {"priority": None, "persona": None}
 
 
 def _normalize_spec(spec: Any) -> Any:
@@ -353,6 +391,50 @@ def index():
 def api_zones():
     load_data()
     return jsonify(CACHE["zones_geojson"])
+
+
+@app.route("/api/zone_info", methods=["POST"])
+def api_zone_info():
+    """Basic, always-available info for a single zone: address (reverse geocoded),
+    current weather, and a few notable amenities. Used when a user clicks any zone."""
+    load_data()
+    data = request.get_json() or {}
+    zone_id = str(data.get("zone_id") or "").strip()
+    if not zone_id:
+        return jsonify({"error": "zone_id required"}), 400
+
+    feats = CACHE["features"]
+    match = feats[feats["zone_id"].astype(str) == zone_id]
+    if match.empty:
+        return jsonify({"error": f"unknown zone {zone_id}"}), 404
+    row = match.iloc[0]
+
+    lat = float(row["center_lat"]) if "center_lat" in feats.columns and pd.notna(row.get("center_lat")) else None
+    lng = float(row["center_lng"]) if "center_lng" in feats.columns and pd.notna(row.get("center_lng")) else None
+
+    address = enrich.reverse_geocode(lat, lng) if (lat is not None and lng is not None) else None
+    weather = enrich.get_weather(lat, lng) if (lat is not None and lng is not None) else None
+
+    highlights = []
+    for col in CACHE.get("count_columns") or []:
+        if "  " in col:
+            continue
+        try:
+            v = row[col]
+            if pd.notna(v) and float(v) > 0:
+                highlights.append({"label": col.replace("cnt_", "").replace("_", " "), "value": int(float(v))})
+        except Exception:
+            continue
+    highlights.sort(key=lambda h: h["value"], reverse=True)
+
+    return jsonify({
+        "zone_id": zone_id,
+        "lat": lat,
+        "lng": lng,
+        "address": address,
+        "weather": weather,
+        "highlights": highlights[:6],
+    })
 
 
 @app.route("/api/status")
@@ -568,6 +650,37 @@ def api_evaluate_prompt():
                 gt_ids = [z["zone_id"] for z in ranked_zones[:len(llm_ranking_ids)]]
                 ranking_spearman = spearman_rho(gt_ids, llm_ranking_ids)
 
+    # ---- 6. Contextual (persona / priority) ranking ----
+    # Runs whenever the prompt states a preference dimension, ranking the RESULT
+    # zones (perfect matches if any, else the closest partial matches) by it.
+    context = _extract_context(nl_query, model)
+    context_ranking: List[str] = []
+    context_scores: Dict[str, int] = {}
+    context_explanations: Dict[str, str] = {}
+    if model.startswith("deepseek") and deepseek_client:
+        ctx_client, ctx_model = deepseek_client, "deepseek-chat"
+    else:
+        ctx_client = openai_client or deepseek_client
+        ctx_model = model if not model.startswith("deepseek") else "gpt-4o"
+    if context.get("priority") and ctx_client:
+        if gt_zones:
+            candidate_ids = gt_zones[:20]
+        elif ranked_zones:
+            candidate_ids = [z["zone_id"] for z in ranked_zones[:20]]
+        else:
+            candidate_ids = []
+        if candidate_ids:
+            try:
+                cr = contextual_rank_zones(
+                    nl_query, context["priority"], context.get("persona"),
+                    candidate_ids, features_df, ctx_client, ctx_model,
+                )
+                context_ranking = cr.get("context_ranking", [])
+                context_scores = cr.get("context_scores", {})
+                context_explanations = cr.get("context_explanations", {})
+            except Exception as exc:
+                print(f"[context] ranking failed: {exc}")
+
     return jsonify({
         "spec": spec,
         "nl_query": nl_query,
@@ -596,6 +709,11 @@ def api_evaluate_prompt():
         "llm_ranking": llm_ranking_ids,
         "llm_explanations": llm_explanations,
         "ranking_spearman": ranking_spearman,
+        # contextual (persona / priority) ranking
+        "context": context,
+        "context_ranking": context_ranking,
+        "context_scores": context_scores,
+        "context_explanations": context_explanations,
     })
 
 

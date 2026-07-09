@@ -371,9 +371,155 @@ def llm_rank_zones(
             for lbl, txt in raw_explanations.items()
             if lbl in label_to_id
         }
-        print(f"[llm_rank_zones] returned {len(labels)} labels → {len(ids)} valid IDs, {len(explanations)} explanations")
+        print(f"[llm_rank_zones] returned {len(labels)} labels -> {len(ids)} valid IDs, {len(explanations)} explanations")
         return {"llm_ordered_ids": ids, "llm_explanations": explanations, "error": None}
 
     except Exception as exc:
         print(f"[llm_rank_zones] exception: {exc}")
         return {"llm_ordered_ids": [], "llm_explanations": {}, "error": str(exc)}
+
+
+# ── contextual (persona / priority) ranking ───────────────────────────────────
+
+_CONTEXT_EXTRA_COLS = ("population", "parking_capacity")
+
+
+def context_feature_columns(features_df: pd.DataFrame, candidate_ids: list) -> list:
+    """Pick the amenity/context columns worth showing the LLM: every distance
+    column, plus count/extra columns that are non-zero for at least one
+    candidate (a category that is zero everywhere carries no ranking signal)."""
+    cols = [c for c in features_df.columns if "  " not in str(c)]  # drop dirty cols
+    df = features_df.copy()
+    df["zone_id"] = df["zone_id"].astype(str)
+    sub = df[df["zone_id"].isin([str(c) for c in candidate_ids])]
+
+    picked = []
+    for c in cols:
+        if c.startswith("dist_to_"):
+            picked.append(c)
+        elif c.startswith("cnt_") or c in _CONTEXT_EXTRA_COLS:
+            try:
+                if sub[c].fillna(0).abs().max() > 0:
+                    picked.append(c)
+            except Exception:
+                continue
+    return picked
+
+
+def contextual_rank_zones(
+    nl_query: str,
+    priority: str,
+    persona: str,
+    candidate_ids: list,
+    features_df: pd.DataFrame,
+    client: Any,
+    model: str = "gpt-4o",
+    top_n: int = 20,
+) -> dict:
+    """
+    Rank candidate zones by how well they serve a user-stated priority
+    dimension (e.g. "greenery", "tourism access", "accessibility"), using the
+    zones' amenity features as evidence plus the LLM's world knowledge.
+
+    Returns {"context_ranking": [zone_id...], "context_scores": {zone_id: 0-100},
+             "context_explanations": {zone_id: str}, "error": str | None}
+    """
+    ids = [str(z) for z in candidate_ids][:top_n]
+    if not ids or not priority:
+        return {"context_ranking": [], "context_scores": {}, "context_explanations": {}, "error": "No candidates or priority"}
+
+    cols = context_feature_columns(features_df, ids)
+    df = features_df.copy()
+    df["zone_id"] = df["zone_id"].astype(str)
+    df_map = df[df["zone_id"].isin(ids)].set_index("zone_id")
+
+    # Stable but rank-hiding labels so Z1/Z2 don't leak any pre-existing order.
+    shuffled = sorted(ids, key=lambda z: z)
+    id_to_label = {zid: f"Z{i+1}" for i, zid in enumerate(shuffled)}
+    label_to_id = {v: k for k, v in id_to_label.items()}
+
+    lines = []
+    for zid in ids:
+        if zid not in df_map.index:
+            continue
+        row = df_map.loc[zid]
+        parts = []
+        for col in cols:
+            val = row[col]
+            if pd.notna(val):
+                fval = float(val)
+                fmt = int(fval) if fval == int(fval) else round(fval, 1)
+                parts.append(f"{_pretty_metric(col)}={fmt}")
+        lines.append(f"{id_to_label[zid]}: {', '.join(parts) if parts else 'no notable amenities'}")
+
+    zones_text = "\n".join(lines)
+    label_list = ", ".join(f'"{lbl}"' for lbl in id_to_label.values())
+    persona_line = f'The user describes themselves as: "{persona}".\n' if persona else ""
+
+    prompt = (
+        f'User query: "{nl_query}"\n'
+        f"{persona_line}"
+        f'They want the candidate zones (which already satisfy their hard constraints) '
+        f'ranked by ONE priority: **{priority}**.\n\n'
+        f"Candidate zones and their amenity features:\n{zones_text}\n\n"
+        f"Use the features as evidence for {priority} (for example: parks / recreation "
+        f"suggest greenery; tourist landmarks / museums / hotels / malls suggest tourism "
+        f"access; bus / subway / transit / parking suggest accessibility), and combine that "
+        f"with your general knowledge of what {priority} means for a location.\n\n"
+        f"For each zone give an integer {priority} score from 0 to 100 and 1-2 sentences of "
+        f"reasoning that names the specific evidence you used. Do not just restate numbers.\n\n"
+        f"Return ONLY JSON:\n"
+        f'{{"ranking": ["Z3", "Z1", ...], "scores": {{"Z3": 82, "Z1": 47}}, '
+        f'"explanations": {{"Z3": "reasoning...", "Z1": "reasoning..."}}}}\n'
+        f"Rank from best to worst for {priority}. Include all {len(lines)} labels. "
+        f"Available labels: {label_list}"
+    )
+
+    def _call(use_json_mode: bool) -> str:
+        kwargs: dict = dict(
+            model=model,
+            messages=[
+                {"role": "system", "content": "You are a spatial analyst. Rank locations by a single priority and explain your reasoning with evidence. Return only JSON."},
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=2200,
+        )
+        if use_json_mode:
+            kwargs["response_format"] = {"type": "json_object"}
+        if model not in ("o4-mini", "o3", "o3-mini"):
+            kwargs["temperature"] = 0.1
+        resp = client.chat.completions.create(**kwargs)
+        return resp.choices[0].message.content.strip()
+
+    try:
+        try:
+            raw = _call(use_json_mode=True)
+        except Exception:
+            raw = _call(use_json_mode=False)
+
+        parsed = json.loads(raw)
+        labels = [str(x) for x in parsed.get("ranking", [])] if isinstance(parsed, dict) else []
+        raw_scores = parsed.get("scores", {}) if isinstance(parsed, dict) else {}
+        raw_expl = parsed.get("explanations", {}) if isinstance(parsed, dict) else {}
+
+        # Any labels the model omitted from "ranking" get appended so nothing is lost.
+        for lbl in id_to_label.values():
+            if lbl not in labels:
+                labels.append(lbl)
+
+        ranking = [label_to_id[lbl] for lbl in labels if lbl in label_to_id]
+        scores = {}
+        for lbl, sc in raw_scores.items():
+            if lbl in label_to_id:
+                try:
+                    scores[label_to_id[lbl]] = max(0, min(100, int(round(float(sc)))))
+                except Exception:
+                    continue
+        explanations = {label_to_id[lbl]: txt for lbl, txt in raw_expl.items() if lbl in label_to_id}
+
+        print(f"[contextual_rank_zones] priority='{priority}' -> {len(ranking)} ids, {len(explanations)} explanations")
+        return {"context_ranking": ranking, "context_scores": scores, "context_explanations": explanations, "error": None}
+
+    except Exception as exc:
+        print(f"[contextual_rank_zones] exception: {exc}")
+        return {"context_ranking": [], "context_scores": {}, "context_explanations": {}, "error": str(exc)}
