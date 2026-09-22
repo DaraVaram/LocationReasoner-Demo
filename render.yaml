@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: locationreasoner-boston
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: cd boston && python app.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.13
+      - key: PYTHONUTF8
+        value: "1"
+      - key: OPENAI_API_KEY
+        sync: false
+
+  - type: web
+    name: locationreasoner-abudhabi
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: cd abu_dhabi && python app.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.13
+      - key: PYTHONUTF8
+        value: "1"
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false

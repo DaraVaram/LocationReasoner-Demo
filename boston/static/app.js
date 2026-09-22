@@ -29,8 +29,8 @@ let zoneInfoCache = {};           // zone_id -> /api/zone_info payload
 
 const OBS_PREVIEW_LEN = 500;
 
-const TILE_LIGHT = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
-const TILE_DARK = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+const TILE_LIGHT = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}";
+const TILE_DARK = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}";
 const MAP_CENTER = [42.3601, -71.0589];
 const MAP_ZOOM = 12;
 
@@ -48,8 +48,9 @@ function applyMapTheme() {
   const dark = document.body.dataset.theme === "dark";
   if (tileLayer) map.removeLayer(tileLayer);
   tileLayer = L.tileLayer(dark ? TILE_DARK : TILE_LIGHT, {
-    attribution: "(C) OpenStreetMap (C) CARTO",
+    attribution: "Tiles &copy; Esri",
     maxZoom: 19,
+    maxNativeZoom: 16,
   }).addTo(map);
 }
 

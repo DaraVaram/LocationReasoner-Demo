@@ -771,4 +771,8 @@ if __name__ == "__main__":
     load_data()
     print(f"\nCategories available: {CACHE['categories']}")
     print(f"Distance columns: {CACHE['distance_columns']}")
-    app.run(host="0.0.0.0", port=5003, debug=True)
+    # Render (and most PaaS hosts) inject PORT; its presence means this is a
+    # real deployment, so keep the Werkzeug debugger off there.
+    port = int(os.environ.get("PORT", 5003))
+    debug = "PORT" not in os.environ
+    app.run(host="0.0.0.0", port=port, debug=debug)
