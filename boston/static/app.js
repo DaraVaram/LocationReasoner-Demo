@@ -101,22 +101,28 @@ function customizeStyle() {
       "fill-extrusion-opacity": dark ? 0.5 : 0.6,
       "fill-extrusion-vertical-gradient": true,
     },
-  }, firstSymbolLayer());
+  }, labelLayer());
   // soften labels a touch
   map.getStyle().layers.filter(l => l.type === "symbol").forEach(l => {
     try { map.setPaintProperty(l.id, "text-opacity", 0.75); } catch (e) {}
   });
 }
 
-function firstSymbolLayer() {
-  return map.getStyle().layers.find(l => l.type === "symbol")?.id;
+// First label drawn after the last road/fill layer. Our layers go just below it,
+// so roads never paint over the zones. (The dark style puts a water-name label
+// before all the roads, so "first symbol layer" would put us under them.)
+function labelLayer() {
+  const layers = map.getStyle().layers;
+  let last = -1;
+  layers.forEach((l, i) => { if (l.type !== "symbol") last = i; });
+  return layers.slice(last + 1).find(l => l.type === "symbol")?.id;
 }
 
 function addZoneLayers() {
   const dark = isDark();
   const base = dark ? "#8a94a6" : "#5b6470";
   map.addSource("zones", { type: "geojson", data: zonesGeoJSON || EMPTY_FC, promoteId: "zone_id" });
-  // Base zones sit on the ground, under the 3D buildings.
+  // Base zones sit on the ground: above the roads, under the 3D buildings.
   map.addLayer({
     id: "zones-fill", type: "fill", source: "zones",
     paint: {
@@ -129,7 +135,7 @@ function addZoneLayers() {
     paint: { "line-color": base, "line-width": 0.7, "line-opacity": dark ? 0.42 : 0.4 },
   }, "bld3d");
 
-  const before = firstSymbolLayer();
+  const before = labelLayer();
   OVERLAY_ORDER.forEach(name => {
     const ov = overlays[name];
     map.addSource(`ov-${name}`, { type: "geojson", data: ov ? ov.data : EMPTY_FC });
