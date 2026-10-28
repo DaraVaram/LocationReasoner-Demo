@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 560" font-family="'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <rect x="8" y="8" width="1224" height="544" rx="20" fill="#ffffff" stroke="#e6eaf2"/>
+  <text x="40" y="52" font-size="27" font-weight="700" fill="#12203a">Click any zone &#8212; one card, five sources</text>
+  <text x="40" y="82" font-size="15" fill="#5b6b82">Every zone on the map is inspectable, whether it matched or not. The card blends live data, ground truth, and LLM reasoning.</text>
+
+  <!-- connector lines -->
+  <g stroke="#c9d4e6" stroke-width="2" fill="none">
+    <line x1="490" y1="205" x2="620" y2="197"/>
+    <line x1="490" y1="255" x2="620" y2="265"/>
+    <line x1="490" y1="318" x2="620" y2="333"/>
+    <line x1="490" y1="392" x2="620" y2="401"/>
+    <line x1="490" y1="452" x2="620" y2="469"/>
+  </g>
+  <g fill="#c9d4e6">
+    <circle cx="490" cy="205" r="3"/><circle cx="490" cy="255" r="3"/><circle cx="490" cy="318" r="3"/><circle cx="490" cy="392" r="3"/><circle cx="490" cy="452" r="3"/>
+  </g>
+
+  <!-- Mock zone info card -->
+  <rect x="100" y="130" width="390" height="392" rx="16" fill="#ffffff" stroke="#d9e0ec"/>
+  <rect x="100" y="130" width="390" height="392" rx="16" fill="none" stroke="#000000" stroke-opacity="0.04"/>
+  <text x="122" y="164" font-size="13" font-weight="600" fill="#12203a" font-family="'Consolas', monospace">ZONE 8843a02287</text>
+  <text x="468" y="164" font-size="18" fill="#9aa6b6" text-anchor="end">&#215;</text>
+
+  <text x="122" y="205" font-size="17" font-weight="700" fill="#12203a">Al Bateen, Abu Dhabi</text>
+
+  <text x="122" y="256" font-size="30" font-weight="700" fill="#12203a">37&#176;C</text>
+  <text x="205" y="256" font-size="15" fill="#5b6b82">/ 99&#176;F</text>
+  <text x="122" y="278" font-size="12.5" fill="#5b6b82">Clear sky &#183; 45% humidity</text>
+
+  <rect x="122" y="298" width="212" height="30" rx="8" fill="#e3f4ed" stroke="#8fd3b8"/>
+  <text x="136" y="318" font-size="13" font-weight="600" fill="#0e7d57">&#10003; Meets all constraints</text>
+
+  <text x="122" y="362" font-size="11" font-weight="700" fill="#5b6b82" letter-spacing="0.5">GREENERY  <tspan fill="#12996b">82 / 100</tspan></text>
+  <line x1="122" y1="372" x2="130" y2="372" stroke="#12996b" stroke-width="2"/>
+  <rect x="122" y="378" width="346" height="1" fill="none"/>
+  <text x="134" y="392" font-size="12.5" font-style="italic" fill="#12203a">Contains 10 parks, indicating</text>
+  <text x="134" y="410" font-size="12.5" font-style="italic" fill="#12203a">significant greenery.</text>
+  <line x1="126" y1="382" x2="126" y2="414" stroke="#12996b" stroke-width="2"/>
+
+  <text x="122" y="444" font-size="11" font-weight="700" fill="#5b6b82" letter-spacing="0.5">NOTABLE AMENITIES</text>
+  <rect x="122" y="454" width="92" height="24" rx="12" fill="#eef2f8" stroke="#d5deeb"/>
+  <text x="168" y="470" font-size="11.5" fill="#12203a" text-anchor="middle">parks &#183; 10</text>
+  <rect x="222" y="454" width="118" height="24" rx="12" fill="#eef2f8" stroke="#d5deeb"/>
+  <text x="281" y="470" font-size="11.5" fill="#12203a" text-anchor="middle">restaurants &#183; 5</text>
+  <rect x="348" y="454" width="104" height="24" rx="12" fill="#eef2f8" stroke="#d5deeb"/>
+  <text x="400" y="470" font-size="11.5" fill="#12203a" text-anchor="middle">mosques &#183; 4</text>
+
+  <!-- Callouts -->
+  <!-- 1 address -->
+  <rect x="620" y="170" width="560" height="54" rx="10" fill="#eef4ff" stroke="#c4dcfa"/>
+  <rect x="620" y="170" width="6" height="54" rx="3" fill="#2b6df3"/>
+  <text x="644" y="194" font-size="15" font-weight="700" fill="#1f5fd6">Address &#8592; OpenStreetMap Nominatim</text>
+  <text x="644" y="213" font-size="13" fill="#5b6b82">reverse-geocoded from the zone&#8217;s centroid</text>
+  <!-- 2 weather -->
+  <rect x="620" y="238" width="560" height="54" rx="10" fill="#e9f7f6" stroke="#b3e2df"/>
+  <rect x="620" y="238" width="6" height="54" rx="3" fill="#128a86"/>
+  <text x="644" y="262" font-size="15" font-weight="700" fill="#0f746f">Temperature &amp; humidity &#8592; Open-Meteo</text>
+  <text x="644" y="281" font-size="13" fill="#5b6b82">current conditions, fetched live on click (keyless)</text>
+  <!-- 3 constraints -->
+  <rect x="620" y="306" width="560" height="54" rx="10" fill="#eef1f6" stroke="#cbd5e6"/>
+  <rect x="620" y="306" width="6" height="54" rx="3" fill="#42526b"/>
+  <text x="644" y="330" font-size="15" font-weight="700" fill="#2f3e57">Constraint breakdown &#8592; ground-truth engine</text>
+  <text x="644" y="349" font-size="13" fill="#5b6b82">deterministic &#10003; / &#10007; for every constraint in the query</text>
+  <!-- 4 why score -->
+  <rect x="620" y="374" width="560" height="54" rx="10" fill="#f1edfe" stroke="#d2c6fb"/>
+  <rect x="620" y="374" width="6" height="54" rx="3" fill="#6d54e6"/>
+  <text x="644" y="398" font-size="15" font-weight="700" fill="#5a3fd6">&#8220;Why this score&#8221; &#8592; LLM</text>
+  <text x="644" y="417" font-size="13" fill="#5b6b82">plain-English reason the zone ranked where it did</text>
+  <!-- 5 amenities -->
+  <rect x="620" y="442" width="560" height="54" rx="10" fill="#fbf1e4" stroke="#f0d9b8"/>
+  <rect x="620" y="442" width="6" height="54" rx="3" fill="#d9832a"/>
+  <text x="644" y="466" font-size="15" font-weight="700" fill="#b06a1e">Notable amenities &#8592; zone feature data</text>
+  <text x="644" y="485" font-size="13" fill="#5b6b82">the zone&#8217;s top amenity counts, straight from the dataset</text>
+</svg>

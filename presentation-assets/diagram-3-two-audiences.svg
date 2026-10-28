@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 580" font-family="'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <symbol id="ckg" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" fill="#12996b"/><path d="M6 10.5 L9 13.5 L14.5 7" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="plb" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" fill="#2b6df3"/><path d="M10 6 L10 14 M6 10 L14 10" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/></symbol>
+  </defs>
+  <rect x="8" y="8" width="1224" height="564" rx="20" fill="#ffffff" stroke="#e6eaf2"/>
+  <text x="40" y="52" font-size="27" font-weight="700" fill="#12203a">One app, two audiences</text>
+  <text x="40" y="82" font-size="15" fill="#5b6b82">A single toggle hides or reveals the evaluation internals &#8212; same query, same results underneath.</text>
+
+  <!-- toggle -->
+  <rect x="520" y="104" width="200" height="40" rx="20" fill="#eef2f8" stroke="#c9d4e6"/>
+  <rect x="524" y="108" width="98" height="32" rx="16" fill="#12996b"/>
+  <text x="573" y="129" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">Consumer</text>
+  <text x="672" y="129" font-size="14" font-weight="600" fill="#5b6b82" text-anchor="middle">ML</text>
+
+  <!-- Consumer panel -->
+  <rect x="60" y="170" width="520" height="360" rx="16" fill="#f4faf7" stroke="#bfe6d6"/>
+  <text x="88" y="212" font-size="19" font-weight="700" fill="#0e7d57">CONSUMER VIEW</text>
+  <text x="88" y="236" font-size="14" fill="#5b6b82">A clean front-end for stakeholders / your PI</text>
+  <g font-size="15" fill="#12203a">
+    <use href="#ckg" x="88" y="266" width="22" height="22"/><text x="122" y="282">Your prompt</text>
+    <use href="#ckg" x="88" y="312" width="22" height="22"/><text x="122" y="328">Ranked zones with plain-English reasoning</text>
+    <use href="#ckg" x="88" y="358" width="22" height="22"/><text x="122" y="374">The map (matches / priority gradient)</text>
+    <use href="#ckg" x="88" y="404" width="22" height="22"/><text x="122" y="420">Click-a-zone info card (address, weather)</text>
+  </g>
+  <text x="88" y="500" font-size="13.5" font-style="italic" fill="#5b6b82">Everything a decision-maker needs &#8212; nothing they don&#8217;t.</text>
+
+  <!-- ML panel -->
+  <rect x="660" y="170" width="520" height="360" rx="16" fill="#f5f8fe" stroke="#c4dcfa"/>
+  <text x="688" y="212" font-size="19" font-weight="700" fill="#1f5fd6">ML VIEW</text>
+  <text x="688" y="236" font-size="14" fill="#5b6b82">Everything on the left, plus the research internals</text>
+  <g font-size="15" fill="#12203a">
+    <use href="#plb" x="688" y="260" width="22" height="22"/><text x="722" y="276">Ground-truth vs LLM zones on the map</text>
+    <use href="#plb" x="688" y="300" width="22" height="22"/><text x="722" y="316">Precision / Recall / F1 metrics</text>
+    <use href="#plb" x="688" y="340" width="22" height="22"/><text x="722" y="356">The generated Python code</text>
+    <use href="#plb" x="688" y="380" width="22" height="22"/><text x="722" y="396">ReAct / Reflexion agent traces</text>
+    <use href="#plb" x="688" y="420" width="22" height="22"/><text x="722" y="436">Formula-vs-LLM ranking + Spearman &#961;</text>
+  </g>
+  <text x="688" y="500" font-size="13.5" font-style="italic" fill="#5b6b82">The rigorous evaluation is one click away.</text>
+</svg>

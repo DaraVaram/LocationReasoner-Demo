@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 380" font-family="'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arw" markerWidth="10" markerHeight="8" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#9fb0c8"/>
+    </marker>
+  </defs>
+  <rect x="8" y="8" width="1224" height="364" rx="20" fill="#ffffff" stroke="#e6eaf2"/>
+  <text x="40" y="52" font-size="27" font-weight="700" fill="#12203a">The LocationReasoner pipeline</text>
+  <text x="40" y="82" font-size="15" fill="#5b6b82">Natural language in &#8594; ranked, explained zones out. The steps added in this update are highlighted in green.</text>
+
+  <!-- arrows -->
+  <g stroke="#9fb0c8" stroke-width="2.5" marker-end="url(#arw)">
+    <line x1="248" y1="200" x2="276" y2="200"/>
+    <line x1="486" y1="200" x2="514" y2="200"/>
+    <line x1="724" y1="200" x2="752" y2="200"/>
+    <line x1="962" y1="200" x2="990" y2="200"/>
+  </g>
+
+  <!-- Box 1 -->
+  <rect x="40" y="140" width="206" height="120" rx="14" fill="#e9f1fe" stroke="#9dc0f7"/>
+  <text x="62" y="178" font-size="18" font-weight="700" fill="#1f5fd6">1 &#183; Prompt</text>
+  <text x="62" y="205" font-size="13" fill="#5b6b82">Natural-language</text>
+  <text x="62" y="225" font-size="13" fill="#5b6b82">site request</text>
+
+  <!-- Box 2 -->
+  <rect x="278" y="140" width="206" height="120" rx="14" fill="#e9f1fe" stroke="#9dc0f7"/>
+  <text x="300" y="178" font-size="18" font-weight="700" fill="#1f5fd6">2 &#183; Spec</text>
+  <text x="300" y="205" font-size="13" fill="#5b6b82">LLM &#8594; JSON rules,</text>
+  <text x="300" y="225" font-size="13" fill="#5b6b82">validated vs data</text>
+
+  <!-- Box 3 -->
+  <rect x="516" y="140" width="206" height="120" rx="14" fill="#e9f1fe" stroke="#9dc0f7"/>
+  <text x="538" y="178" font-size="18" font-weight="700" fill="#1f5fd6">3 &#183; Ground truth</text>
+  <text x="538" y="205" font-size="13" fill="#5b6b82">zones meeting</text>
+  <text x="538" y="225" font-size="13" fill="#5b6b82">every constraint</text>
+
+  <!-- Box 4 -->
+  <rect x="754" y="140" width="206" height="120" rx="14" fill="#e9f1fe" stroke="#9dc0f7"/>
+  <text x="776" y="178" font-size="18" font-weight="700" fill="#1f5fd6">4 &#183; Ranking</text>
+  <text x="776" y="205" font-size="13" fill="#5b6b82">0&#8211;100% score</text>
+  <text x="776" y="225" font-size="13" fill="#5b6b82">+ LLM re-rank</text>
+
+  <!-- Box 5 (NEW) -->
+  <rect x="992" y="140" width="206" height="120" rx="14" fill="#e3f4ed" stroke="#12996b"/>
+  <rect x="1150" y="150" width="40" height="19" rx="9.5" fill="#12996b"/>
+  <text x="1170" y="163.5" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle">NEW</text>
+  <text x="1014" y="178" font-size="18" font-weight="700" fill="#0e7d57">5 &#183; Context rank</text>
+  <text x="1014" y="205" font-size="13" fill="#3f6357">re-rank by your</text>
+  <text x="1014" y="225" font-size="13" fill="#3f6357">priority + reasoning</text>
+
+  <!-- Footer: zone info -->
+  <rect x="40" y="296" width="1158" height="52" rx="12" fill="#e3f4ed" stroke="#12996b"/>
+  <rect x="58" y="311" width="40" height="19" rx="9.5" fill="#12996b"/>
+  <text x="78" y="324.5" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle">NEW</text>
+  <text x="112" y="327" font-size="15" font-weight="600" fill="#0e7d57">Click any zone on the map &#8594; Zone info card:</text>
+  <text x="470" y="327" font-size="15" fill="#3f6357">address (OpenStreetMap) &#183; live weather (Open-Meteo) &#183; constraint breakdown &#183; &#8220;why this score&#8221; (LLM)</text>
+</svg>

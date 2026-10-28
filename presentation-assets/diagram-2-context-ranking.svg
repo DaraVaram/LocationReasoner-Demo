@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 620" font-family="'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arw2" markerWidth="10" markerHeight="8" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#9fb0c8"/>
+    </marker>
+  </defs>
+  <rect x="8" y="8" width="1224" height="604" rx="20" fill="#ffffff" stroke="#e6eaf2"/>
+  <text x="40" y="52" font-size="27" font-weight="700" fill="#12203a">One search, your priority &#8212; three different rankings</text>
+  <text x="40" y="82" font-size="15" fill="#5b6b82">You state a priority in the prompt. The same candidate zones get re-ranked by it, each with its own reasoning.</text>
+
+  <!-- shared query -->
+  <rect x="320" y="106" width="600" height="70" rx="14" fill="#eef2f8" stroke="#c9d4e6"/>
+  <text x="620" y="134" font-size="15" font-weight="600" fill="#12203a" text-anchor="middle">Hard constraints: within 800 m of a mall, &#8805; 2 pharmacies</text>
+  <text x="620" y="158" font-size="14" fill="#5b6b82" text-anchor="middle">&#8594; 21 candidate zones (Abu Dhabi) &#8212; the same pool feeds all three</text>
+
+  <!-- fan arrows -->
+  <g stroke="#9fb0c8" stroke-width="2.5" marker-end="url(#arw2)" fill="none">
+    <path d="M470,176 C400,200 300,210 240,236"/>
+    <path d="M620,178 L620,236"/>
+    <path d="M770,176 C840,200 940,210 1000,236"/>
+  </g>
+
+  <!-- Column A: Greenery -->
+  <rect x="65" y="240" width="350" height="46" rx="10" fill="#12996b"/>
+  <text x="85" y="262" font-size="16" font-weight="700" fill="#ffffff">GREENERY</text>
+  <text x="85" y="279" font-size="12" fill="#d7f0e6">ranked by parks / open space</text>
+  <g>
+    <rect x="65" y="298" width="350" height="66" rx="10" fill="#e3f4ed" stroke="#bfe6d6"/>
+    <text x="88" y="330" font-size="17" font-weight="700" fill="#0e7d57">#1</text>
+    <text x="126" y="324" font-size="15" font-weight="600" fill="#12203a">Zone 3</text>
+    <text x="126" y="345" font-size="11.5" fill="#5b6b82">&#8220;10 parks nearby&#8221;</text>
+    <text x="392" y="322" font-size="16" font-weight="700" fill="#0e7d57" text-anchor="end">100</text>
+    <rect x="272" y="336" width="120" height="6" rx="3" fill="#cfe8dd"/>
+    <rect x="272" y="336" width="120" height="6" rx="3" fill="#12996b"/>
+  </g>
+  <g>
+    <rect x="65" y="372" width="350" height="46" rx="10" fill="#f4f8f6" stroke="#dcebe4"/>
+    <text x="88" y="400" font-size="15" font-weight="700" fill="#0e7d57">#2</text>
+    <text x="126" y="400" font-size="15" fill="#12203a">Zone 1</text>
+    <text x="392" y="400" font-size="15" font-weight="700" fill="#0e7d57" text-anchor="end">72</text>
+    <rect x="272" y="404" width="120" height="6" rx="3" fill="#e0efe9"/>
+    <rect x="272" y="404" width="86" height="6" rx="3" fill="#4bbf95"/>
+  </g>
+  <g>
+    <rect x="65" y="426" width="350" height="46" rx="10" fill="#f4f8f6" stroke="#dcebe4"/>
+    <text x="88" y="454" font-size="15" font-weight="700" fill="#0e7d57">#3</text>
+    <text x="126" y="454" font-size="15" fill="#12203a">Zone 5</text>
+    <text x="392" y="454" font-size="15" font-weight="700" fill="#0e7d57" text-anchor="end">55</text>
+    <rect x="272" y="458" width="120" height="6" rx="3" fill="#e0efe9"/>
+    <rect x="272" y="458" width="66" height="6" rx="3" fill="#7fd0b1"/>
+  </g>
+
+  <!-- Column B: Tourism -->
+  <rect x="445" y="240" width="350" height="46" rx="10" fill="#d9832a"/>
+  <text x="465" y="262" font-size="16" font-weight="700" fill="#ffffff">TOURISM ACCESS</text>
+  <text x="465" y="279" font-size="12" fill="#f8e6d2">ranked by landmarks, malls</text>
+  <g>
+    <rect x="445" y="298" width="350" height="66" rx="10" fill="#fbeede" stroke="#f0d5b3"/>
+    <text x="468" y="330" font-size="17" font-weight="700" fill="#b06a1e">#1</text>
+    <text x="506" y="324" font-size="15" font-weight="600" fill="#12203a">Zone 5</text>
+    <text x="506" y="345" font-size="11.5" fill="#5b6b82">&#8220;next to a landmark&#8221;</text>
+    <text x="772" y="322" font-size="16" font-weight="700" fill="#b06a1e" text-anchor="end">88</text>
+    <rect x="652" y="336" width="120" height="6" rx="3" fill="#f2ddc2"/>
+    <rect x="652" y="336" width="106" height="6" rx="3" fill="#d9832a"/>
+  </g>
+  <g>
+    <rect x="445" y="372" width="350" height="46" rx="10" fill="#fcf7f1" stroke="#f0e2d0"/>
+    <text x="468" y="400" font-size="15" font-weight="700" fill="#b06a1e">#2</text>
+    <text x="506" y="400" font-size="15" fill="#12203a">Zone 2</text>
+    <text x="772" y="400" font-size="15" font-weight="700" fill="#b06a1e" text-anchor="end">70</text>
+    <rect x="652" y="404" width="120" height="6" rx="3" fill="#f4e6d4"/>
+    <rect x="652" y="404" width="84" height="6" rx="3" fill="#e3a45f"/>
+  </g>
+  <g>
+    <rect x="445" y="426" width="350" height="46" rx="10" fill="#fcf7f1" stroke="#f0e2d0"/>
+    <text x="468" y="454" font-size="15" font-weight="700" fill="#b06a1e">#3</text>
+    <text x="506" y="454" font-size="15" fill="#12203a">Zone 3</text>
+    <text x="772" y="454" font-size="15" font-weight="700" fill="#b06a1e" text-anchor="end">61</text>
+    <rect x="652" y="458" width="120" height="6" rx="3" fill="#f4e6d4"/>
+    <rect x="652" y="458" width="73" height="6" rx="3" fill="#eab77e"/>
+  </g>
+
+  <!-- Column C: Accessibility -->
+  <rect x="825" y="240" width="350" height="46" rx="10" fill="#2b6df3"/>
+  <text x="845" y="262" font-size="16" font-weight="700" fill="#ffffff">ACCESSIBILITY</text>
+  <text x="845" y="279" font-size="12" fill="#d7e5fc">ranked by transit, parking</text>
+  <g>
+    <rect x="825" y="298" width="350" height="66" rx="10" fill="#e9f1fe" stroke="#c4dcfa"/>
+    <text x="848" y="330" font-size="17" font-weight="700" fill="#1f5fd6">#1</text>
+    <text x="886" y="324" font-size="15" font-weight="600" fill="#12203a">Zone 2</text>
+    <text x="886" y="345" font-size="11.5" fill="#5b6b82">&#8220;11 bus stops nearby&#8221;</text>
+    <text x="1152" y="322" font-size="16" font-weight="700" fill="#1f5fd6" text-anchor="end">95</text>
+    <rect x="1032" y="336" width="120" height="6" rx="3" fill="#d4e4fb"/>
+    <rect x="1032" y="336" width="114" height="6" rx="3" fill="#2b6df3"/>
+  </g>
+  <g>
+    <rect x="825" y="372" width="350" height="46" rx="10" fill="#f5f8fe" stroke="#dde9fb"/>
+    <text x="848" y="400" font-size="15" font-weight="700" fill="#1f5fd6">#2</text>
+    <text x="886" y="400" font-size="15" fill="#12203a">Zone 4</text>
+    <text x="1152" y="400" font-size="15" font-weight="700" fill="#1f5fd6" text-anchor="end">80</text>
+    <rect x="1032" y="404" width="120" height="6" rx="3" fill="#e2ecfb"/>
+    <rect x="1032" y="404" width="96" height="6" rx="3" fill="#6699f6"/>
+  </g>
+  <g>
+    <rect x="825" y="426" width="350" height="46" rx="10" fill="#f5f8fe" stroke="#dde9fb"/>
+    <text x="848" y="454" font-size="15" font-weight="700" fill="#1f5fd6">#3</text>
+    <text x="886" y="454" font-size="15" fill="#12203a">Zone 1</text>
+    <text x="1152" y="454" font-size="15" font-weight="700" fill="#1f5fd6" text-anchor="end">66</text>
+    <rect x="1032" y="458" width="120" height="6" rx="3" fill="#e2ecfb"/>
+    <rect x="1032" y="458" width="79" height="6" rx="3" fill="#93b6f8"/>
+  </g>
+
+  <!-- takeaway -->
+  <rect x="65" y="504" width="1110" height="72" rx="12" fill="#f7f9fc" stroke="#e2e8f2"/>
+  <text x="620" y="535" font-size="16" font-weight="700" fill="#12203a" text-anchor="middle">Same five candidate zones &#8212; a completely different order for each priority.</text>
+  <text x="620" y="559" font-size="14" fill="#5b6b82" text-anchor="middle">Rigid constraint-matching becomes the human judgment real site selection needs, with a reason for every zone.</text>
+</svg>
