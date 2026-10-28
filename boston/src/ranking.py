@@ -521,6 +521,10 @@ def contextual_rank_zones(
                     continue
         explanations = {label_to_id[lbl]: txt for lbl, txt in raw_expl.items() if lbl in label_to_id}
 
+        # The model's list order can disagree with its own scores; order by score
+        # (stable sort keeps the model's order as the tiebreak).
+        ranking.sort(key=lambda z: -scores.get(z, -1))
+
         print(f"[contextual_rank_zones] priority='{priority}' -> {len(ranking)} ids, {len(explanations)} explanations")
         return {"context_ranking": ranking, "context_scores": scores, "context_explanations": explanations, "error": None}
 

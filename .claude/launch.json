@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dubai-route-demo",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8765", "--directory", "dubai-route-demo"],
+      "port": 8765
+    },
+    {
+      "name": "abu-dhabi",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "cd /d abu_dhabi && set PYTHONUTF8=1&& C:\\Users\\Lenovo\\anaconda3\\envs\\site_selection\\python.exe app.py"],
+      "port": 5002
+    },
+    {
+      "name": "boston",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "cd /d boston && set PYTHONUTF8=1&& C:\\Users\\Lenovo\\anaconda3\\envs\\site_selection\\python.exe app.py"],
+      "port": 5003
+    }
+  ]
+}

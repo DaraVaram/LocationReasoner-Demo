@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LLM Query Console - Boston Site Selection</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body data-theme="dark" data-view="consumer">
@@ -16,7 +16,7 @@
   <aside id="side-panels">
     <header class="side-header">
       <div class="brand">
-        <div class="brand-title">LLM Query Console</div>
+        <div class="brand-title">LocationReasoner</div>
         <div class="brand-subtitle">Boston Site Selection</div>
       </div>
       <div class="header-actions">
@@ -190,6 +190,7 @@
 
   <div id="map-wrap">
     <div id="map"></div>
+    <div class="vignette"></div>
     <div class="zone-info-card" id="zone-info-card" style="display:none">
       <button class="zic-close" id="zic-close" type="button" aria-label="Close">&times;</button>
       <div class="zic-title" id="zic-title">Zone</div>
@@ -232,7 +233,7 @@
   </div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>

@@ -4,14 +4,13 @@
 
 const API = `${window.location.origin}/api`;
 
-// Map + layers
-let map, allZonesLayer, filterLayer, tileLayer = null;
-let compLayers = { tp: null, fp: null, fn: null };
-let gradientLayer = null;
-let matchLayer = null;
-let contextLayer = null;
-let selectedLayer = null;
+// Map + layers (MapLibre GL, 3D)
+let map = null;
+let mapReady = false;             // style loaded and zone layers added
 let zonesGeoJSON = null;
+let overlays = {};                // overlay name -> { data, opacity }
+let hoveredZoneId = null;
+let orbiting = false;
 
 // State
 let isRunning = false;
@@ -29,29 +28,144 @@ let zoneInfoCache = {};           // zone_id -> /api/zone_info payload
 
 const OBS_PREVIEW_LEN = 500;
 
-const TILE_LIGHT = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}";
-const TILE_DARK = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}";
-const MAP_CENTER = [24.4539, 54.3773];
-const MAP_ZOOM = 11;
+// Same basemap + 3D building treatment as the Dubai route demo.
+const STYLE_DARK = "https://tiles.openfreemap.org/styles/dark";
+const STYLE_LIGHT = "https://tiles.openfreemap.org/styles/positron";
+const MAP_CENTER = [54.3773, 24.4539];   // [lng, lat]
+const MAP_ZOOM = 11.2;
+const MAP_PITCH = 52;
+const MAP_BEARING = -20;
+
+// Result overlays, bottom to top. Each is a GeoJSON source drawn as translucent
+// 3D columns (fill-extrusion) plus a crisp outline on the ground.
+const OVERLAY_ORDER = ["filter", "fn", "fp", "tp", "gradient", "match", "context"];
+const EMPTY_FC = { type: "FeatureCollection", features: [] };
 
 // ============================================================
 // MAP
 // ============================================================
+function isDark() {
+  return document.body.dataset.theme === "dark";
+}
+
 function initMap() {
-  map = L.map("map").setView(MAP_CENTER, MAP_ZOOM);
-  map.zoomControl.setPosition("topright"); // clear the top-left zone-info card
-  applyMapTheme();
+  map = new maplibregl.Map({
+    container: "map",
+    style: isDark() ? STYLE_DARK : STYLE_LIGHT,
+    center: MAP_CENTER, zoom: MAP_ZOOM, pitch: MAP_PITCH, bearing: MAP_BEARING,
+    antialias: true, maxPitch: 75,
+    preserveDrawingBuffer: true,   // reliable screenshots / screen captures
+    attributionControl: { compact: true },
+  });
+  map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
+  map.on("style.load", () => {
+    customizeStyle();
+    addZoneLayers();
+    mapReady = true;
+  });
+  map.on("click", (e) => {
+    const zid = pickZone(e.point);
+    if (zid) openZoneInfo(zid);
+  });
+  map.on("mousemove", (e) => {
+    const zid = pickZone(e.point);
+    map.getCanvas().style.cursor = zid ? "pointer" : "";
+    setHoveredZone(zid);
+  });
+  map.on("mouseout", () => setHoveredZone(null));
+  ["mousedown", "wheel", "touchstart", "dragstart"].forEach(ev => map.on(ev, stopOrbit));
+  map.once("load", () => startOrbit());
+}
+
+function customizeStyle() {
+  const dark = isDark();
+  const set = (id, p, v) => map.getLayer(id) && map.setPaintProperty(id, p, v);
+  if (dark) {
+    set("background", "background-color", "#080b10");
+    set("water", "fill-color", "#0a1522");
+    set("landuse_park", "fill-color", "#0c1410");
+    set("highway_major_inner", "line-color", "#1a212c");
+    set("highway_minor", "line-color", "#141a23");
+    set("highway_motorway_inner", "line-color", ["interpolate", ["linear"], ["zoom"], 5.8, "hsla(0,0%,85%,0.53)", 6, "#232c39"]);
+  }
+  if (map.getLayer("building")) map.setLayoutProperty("building", "visibility", "none");
+  const ramp = dark
+    ? [0, "#1e2635", 60, "#28334a", 200, "#34445f", 400, "#41557a"]
+    : [0, "#e3e7ee", 60, "#d3d9e3", 200, "#c2cad8", 400, "#b0bacb"];
+  map.addLayer({
+    id: "bld3d", type: "fill-extrusion", source: "openmaptiles", "source-layer": "building", minzoom: 13,
+    paint: {
+      "fill-extrusion-color": ["interpolate", ["linear"], ["coalesce", ["get", "render_height"], 8], ...ramp],
+      "fill-extrusion-height": ["interpolate", ["linear"], ["zoom"], 13, 0, 13.6, ["coalesce", ["get", "render_height"], 8]],
+      "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
+      "fill-extrusion-opacity": dark ? 0.5 : 0.6,
+      "fill-extrusion-vertical-gradient": true,
+    },
+  }, firstSymbolLayer());
+  // soften labels a touch
+  map.getStyle().layers.filter(l => l.type === "symbol").forEach(l => {
+    try { map.setPaintProperty(l.id, "text-opacity", 0.75); } catch (e) {}
+  });
+}
+
+function firstSymbolLayer() {
+  return map.getStyle().layers.find(l => l.type === "symbol")?.id;
+}
+
+function addZoneLayers() {
+  const dark = isDark();
+  const base = dark ? "#8a94a6" : "#5b6470";
+  map.addSource("zones", { type: "geojson", data: zonesGeoJSON || EMPTY_FC, promoteId: "zone_id" });
+  // Base zones sit on the ground, under the 3D buildings.
+  map.addLayer({
+    id: "zones-fill", type: "fill", source: "zones",
+    paint: {
+      "fill-color": ["case", ["boolean", ["feature-state", "hover"], false], dark ? "#7dd3fc" : "#2b6df3", base],
+      "fill-opacity": ["case", ["boolean", ["feature-state", "hover"], false], 0.22, 0.06],
+    },
+  }, "bld3d");
+  map.addLayer({
+    id: "zones-line", type: "line", source: "zones",
+    paint: { "line-color": base, "line-width": 0.7, "line-opacity": dark ? 0.42 : 0.4 },
+  }, "bld3d");
+
+  const before = firstSymbolLayer();
+  OVERLAY_ORDER.forEach(name => {
+    const ov = overlays[name];
+    map.addSource(`ov-${name}`, { type: "geojson", data: ov ? ov.data : EMPTY_FC });
+    map.addLayer({
+      id: `ov-${name}-line`, type: "line", source: `ov-${name}`,
+      paint: { "line-color": ["get", "c"], "line-width": 1.6, "line-opacity": 0.95 },
+    }, before);
+    map.addLayer({
+      id: `ov-${name}`, type: "fill-extrusion", source: `ov-${name}`,
+      paint: {
+        "fill-extrusion-color": ["get", "c"],
+        "fill-extrusion-height": columnHeight(1),
+        "fill-extrusion-base": 0,
+        "fill-extrusion-opacity": columnOpacity(ov ? ov.opacity : 0.6),
+        "fill-extrusion-vertical-gradient": true,
+      },
+    }, before);
+  });
+
+  map.addSource("selected", { type: "geojson", data: selectedFeatureCollection() });
+  map.addLayer({
+    id: "selected-glow", type: "line", source: "selected",
+    paint: { "line-color": dark ? "#7dd3fc" : "#2b6df3", "line-width": 14, "line-blur": 10, "line-opacity": 0.45 },
+  }, before);
+  map.addLayer({
+    id: "selected-line", type: "line", source: "selected",
+    paint: { "line-color": dark ? "#e0f2fe" : "#1d4ed8", "line-width": 2.5, "line-dasharray": [2, 1.2] },
+  }, before);
 }
 
 function applyMapTheme() {
   if (!map) return;
-  const dark = document.body.dataset.theme === "dark";
-  if (tileLayer) map.removeLayer(tileLayer);
-  tileLayer = L.tileLayer(dark ? TILE_DARK : TILE_LIGHT, {
-    attribution: "Tiles &copy; Esri",
-    maxZoom: 19,
-    maxNativeZoom: 16,
-  }).addTo(map);
+  mapReady = false;
+  hoveredZoneId = null;
+  // diff:false forces a full reload so "style.load" fires and re-adds our layers.
+  map.setStyle(isDark() ? STYLE_DARK : STYLE_LIGHT, { diff: false });
 }
 
 async function loadZones() {
@@ -65,12 +179,7 @@ async function loadZones() {
         zoneCoords[String(p.zone_id)] = { lat: +p.center_lat, lng: +p.center_lng };
       }
     });
-    allZonesLayer = L.geoJSON(zonesGeoJSON, {
-      style: { fillColor: "#8a94a6", fillOpacity: 0.08, color: "#8a94a6", weight: 0.5 },
-      onEachFeature: (feature, layer) => {
-        layer.on("click", () => openZoneInfo(String(feature.properties.zone_id)));
-      },
-    }).addTo(map);
+    if (mapReady) map.getSource("zones").setData(zonesGeoJSON);
     showToast("Zones loaded — click any zone for details");
   } catch (err) {
     console.error(err);
@@ -78,12 +187,111 @@ async function loadZones() {
   }
 }
 
-// Bind an "open info" click to every feature in a result overlay so clicks on
-// top layers resolve to the same zone-info card as the base layer.
-function bindInfoClicks(geoLayer) {
-  geoLayer.eachLayer(l => {
-    if (l.feature) l.on("click", () => openZoneInfo(String(l.feature.properties.zone_id)));
-  });
+// Topmost zone under the cursor: result columns first, then the base grid.
+function pickZone(point) {
+  if (!mapReady) return null;
+  const layers = OVERLAY_ORDER.map(n => `ov-${n}`).reverse().concat("zones-fill");
+  const hit = map.queryRenderedFeatures(point, { layers })[0];
+  return hit ? String(hit.properties.zone_id) : null;
+}
+
+function setHoveredZone(zid) {
+  if (zid === hoveredZoneId || !mapReady) return;
+  if (hoveredZoneId) map.setFeatureState({ source: "zones", id: hoveredZoneId }, { hover: false });
+  hoveredZoneId = zid;
+  if (zid) map.setFeatureState({ source: "zones", id: zid }, { hover: true });
+}
+
+function zoneFeatures(ids) {
+  if (!zonesGeoJSON) return [];
+  const s = new Set(ids.map(String));
+  return zonesGeoJSON.features.filter(f => s.has(String(f.properties.zone_id)));
+}
+
+// Draw `feats` into overlay `name`. color/height are a value or fn(feature).
+function setOverlay(name, feats, { color, height, opacity = 0.6 }) {
+  const pick = (v, f) => (typeof v === "function" ? v(f) : v);
+  const data = {
+    type: "FeatureCollection",
+    features: feats.map(f => ({
+      type: "Feature",
+      geometry: f.geometry,
+      properties: { zone_id: String(f.properties.zone_id), c: pick(color, f), h: pick(height, f) },
+    })),
+  };
+  overlays[name] = { data, opacity };
+  if (!mapReady) return;
+  map.getSource(`ov-${name}`).setData(data);
+  map.setPaintProperty(`ov-${name}`, "fill-extrusion-opacity", columnOpacity(opacity));
+  riseOverlay(name);
+}
+
+function clearOverlay(name) {
+  delete overlays[name];
+  if (mapReady) map.getSource(`ov-${name}`).setData(EMPTY_FC);
+}
+
+// Column height in meters, exaggerated when zoomed out so the city-wide view
+// still reads as a 3D bar chart, and true-scale next to buildings up close.
+function columnHeight(k) {
+  return ["interpolate", ["linear"], ["zoom"],
+    10, ["*", ["get", "h"], 6 * k],
+    14.5, ["*", ["get", "h"], 0.8 * k]];
+}
+
+// Columns turn to glass up close so the 3D buildings inside stay visible.
+function columnOpacity(op) {
+  return ["interpolate", ["linear"], ["zoom"], 12.5, op, 15, op * 0.5];
+}
+
+// Grow the columns out of the ground.
+function riseOverlay(name, ms = 900) {
+  const id = `ov-${name}`;
+  const t0 = performance.now();
+  (function step(t) {
+    if (!mapReady || !map.getLayer(id)) return;
+    const k = Math.min(1, (t - t0) / ms);
+    map.setPaintProperty(id, "fill-extrusion-height", columnHeight(1 - Math.pow(1 - k, 3)));
+    if (k < 1) requestAnimationFrame(step);
+  })(t0);
+}
+
+function featureBounds(feats) {
+  const b = new maplibregl.LngLatBounds();
+  const walk = c => (typeof c[0] === "number" ? b.extend(c) : c.forEach(walk));
+  feats.forEach(f => walk(f.geometry.coordinates));
+  return b;
+}
+
+// Fly the camera to frame `feats`, leaving room for the floating side panel.
+function flyToFeatures(feats, maxZoom = 14.6) {
+  if (!map || !feats.length) return;
+  const panel = document.getElementById("side-panels").getBoundingClientRect();
+  const padding = { left: Math.round(panel.right) + 60, right: 90, top: 110, bottom: 110 };
+  // Padding passed to an earlier camera call persists on the map and would be
+  // added to ours, so clear it before fitting.
+  map.setPadding({ top: 0, right: 0, bottom: 0, left: 0 });
+  const cam = map.cameraForBounds(featureBounds(feats), { padding, bearing: map.getBearing() });
+  if (!cam) return;
+  stopOrbit();
+  map.easeTo({ ...cam, zoom: Math.min(maxZoom, cam.zoom + 0.2), pitch: 55, duration: 1800 });
+  map.once("moveend", () => startOrbit());
+}
+
+function startOrbit() {
+  if (orbiting) return;
+  orbiting = true;
+  let last = performance.now();
+  (function f(t) {
+    if (!orbiting) return;
+    map.setBearing(map.getBearing() + (t - last) * 0.0018);
+    last = t;
+    requestAnimationFrame(f);
+  })(last);
+}
+
+function stopOrbit() {
+  orbiting = false;
 }
 
 // ============================================================
@@ -362,7 +570,7 @@ async function renderMap(data, animate) {
         renderSteps("llm-steps", data.llm_steps, data.llm_steps.length - 1);
       }
     }
-    if (filterLayer) { map.removeLayer(filterLayer); filterLayer = null; }
+    clearOverlay("filter");
     showComparison(data.comparison);
     if (data.gt_count === 0 && data.ranked_zones && data.ranked_zones.length > 0) {
       showGradientZones(data.ranked_zones);
@@ -384,54 +592,37 @@ async function renderMap(data, animate) {
 
   // Keep the user's selected-zone outline on top after a re-render.
   if (selectedZoneId) highlightSelectedZone(selectedZoneId);
+
+  // Frame the strongest results (ranked lists can include far-off weak zones).
+  flyToFeatures(focusFeatures(data));
+}
+
+function focusFeatures(data) {
+  if (overlays.context) return zoneFeatures((data.context_ranking || []).slice(0, 8));
+  if (overlays.gradient) return zoneFeatures((data.ranked_zones || []).slice(0, 10).map(z => z.zone_id));
+  return OVERLAY_ORDER.flatMap(n => (overlays[n] ? overlays[n].data.features : []));
 }
 
 // ============================================================
 // MAP HELPERS
 // ============================================================
 function clearLayers() {
-  if (filterLayer) { map.removeLayer(filterLayer); filterLayer = null; }
-  if (gradientLayer) { map.removeLayer(gradientLayer); gradientLayer = null; }
-  if (matchLayer) { map.removeLayer(matchLayer); matchLayer = null; }
-  if (contextLayer) { map.removeLayer(contextLayer); contextLayer = null; }
-  Object.keys(compLayers).forEach(key => {
-    if (compLayers[key]) { map.removeLayer(compLayers[key]); compLayers[key] = null; }
-  });
+  OVERLAY_ORDER.forEach(clearOverlay);
 }
 
 function highlightZones(ids, color, opacity) {
-  if (!zonesGeoJSON) return;
-  const s = new Set(ids.map(String));
-  const feats = zonesGeoJSON.features.filter(f => s.has(String(f.properties.zone_id)));
-  if (filterLayer) map.removeLayer(filterLayer);
-  filterLayer = L.geoJSON({ type: "FeatureCollection", features: feats }, {
-    style: { fillColor: color, fillOpacity: opacity, color, weight: 2 },
-  }).addTo(map);
+  setOverlay("filter", zoneFeatures(ids), { color, height: 100, opacity });
 }
 
 function showComparison(cmp) {
-  const make = (ids, color, op) => {
-    const s = new Set(ids.map(String));
-    const feats = zonesGeoJSON.features.filter(f => s.has(String(f.properties.zone_id)));
-    const layer = L.geoJSON({ type: "FeatureCollection", features: feats }, {
-      style: { fillColor: color, fillOpacity: op, color, weight: 2 },
-    });
-    bindInfoClicks(layer);
-    return layer;
-  };
-  if (cmp.fn.length) compLayers.fn = make(cmp.fn, "#264653", 0.6).addTo(map);
-  if (cmp.fp.length) compLayers.fp = make(cmp.fp, "#e05252", 0.7).addTo(map);
-  if (cmp.tp.length) compLayers.tp = make(cmp.tp, "#1d9a6c", 0.7).addTo(map);
+  if (cmp.fn.length) setOverlay("fn", zoneFeatures(cmp.fn), { color: "#3b6b7a", height: 90, opacity: 0.6 });
+  if (cmp.fp.length) setOverlay("fp", zoneFeatures(cmp.fp), { color: "#e05252", height: 160, opacity: 0.65 });
+  if (cmp.tp.length) setOverlay("tp", zoneFeatures(cmp.tp), { color: "#1d9a6c", height: 240, opacity: 0.65 });
 }
 
 function showMatchZones(ids) {
   if (!ids || !zonesGeoJSON) return;
-  const s = new Set(ids.map(String));
-  const feats = zonesGeoJSON.features.filter(f => s.has(String(f.properties.zone_id)));
-  matchLayer = L.geoJSON({ type: "FeatureCollection", features: feats }, {
-    style: { fillColor: "#1d9a6c", fillOpacity: 0.6, color: "#1d9a6c", weight: 1.5 },
-    onEachFeature: (f, l) => l.on("click", () => openZoneInfo(String(f.properties.zone_id))),
-  }).addTo(map);
+  setOverlay("match", zoneFeatures(ids), { color: "#1d9a6c", height: 240, opacity: 0.6 });
   setLegendMode("match");
 }
 
@@ -569,17 +760,13 @@ function showGradientZones(rankedZones) {
   rankedZones.forEach(z => { scoreMap[String(z.zone_id)] = z; });
 
   const scored = zonesGeoJSON.features.filter(f => scoreMap[String(f.properties.zone_id)]);
-
-  gradientLayer = L.geoJSON({ type: "FeatureCollection", features: scored }, {
-    style: (feature) => {
-      const z = scoreMap[String(feature.properties.zone_id)];
-      const color = getScoreColor(z ? z.score : 0);
-      return { fillColor: color, fillOpacity: 0.72, color, weight: 1.5 };
-    },
-    onEachFeature: (feature, layer) => {
-      layer.on("click", () => openZoneInfo(String(feature.properties.zone_id)));
-    },
-  }).addTo(map);
+  const scoreOf = f => scoreMap[String(f.properties.zone_id)]?.score || 0;
+  // Column height encodes how close the zone comes to satisfying the query.
+  setOverlay("gradient", scored, {
+    color: f => getScoreColor(scoreOf(f)),
+    height: f => 30 + scoreOf(f) * 400,
+    opacity: 0.72,
+  });
 
   setLegendMode("ranked");
 }
@@ -717,20 +904,8 @@ function toggleZrItem(el, zoneId) {
 }
 
 function flyToZone(zoneId) {
-  const layer = findZoneLayer(zoneId);
-  if (layer && layer.getBounds) {
-    map.fitBounds(layer.getBounds(), { maxZoom: 14 });
-  }
+  flyToFeatures(zoneFeatures([zoneId]), 15.2);
   openZoneInfo(zoneId);
-}
-
-function findZoneLayer(zoneId) {
-  for (const gl of [contextLayer, gradientLayer, matchLayer, allZonesLayer]) {
-    if (!gl) continue;
-    const found = gl.getLayers().find(l => l.feature && String(l.feature.properties.zone_id) === String(zoneId));
-    if (found) return found;
-  }
-  return null;
 }
 
 function resetZoneRanking() {
@@ -808,16 +983,13 @@ function showContextGradient(data) {
   if (!zonesGeoJSON) return;
   const ranking = data.context_ranking || [];
   const scores = data.context_scores || {};
-  const idset = new Set(ranking.map(String));
-  const feats = zonesGeoJSON.features.filter(f => idset.has(String(f.properties.zone_id)));
-  contextLayer = L.geoJSON({ type: "FeatureCollection", features: feats }, {
-    style: (f) => {
-      const s = scores[String(f.properties.zone_id)];
-      const c = getContextColor(s);
-      return { fillColor: c, fillOpacity: 0.72, color: c, weight: 1.5 };
-    },
-    onEachFeature: (f, l) => l.on("click", () => openZoneInfo(String(f.properties.zone_id))),
-  }).addTo(map);
+  const scoreOf = f => scores[String(f.properties.zone_id)];
+  // Column height encodes the zone's fit to the stated priority (0-100).
+  setOverlay("context", zoneFeatures(ranking), {
+    color: f => getContextColor(scoreOf(f)),
+    height: f => 40 + (scoreOf(f) ?? 0) * 4,
+    opacity: 0.72,
+  });
   setLegendMode("context");
 }
 
@@ -924,22 +1096,19 @@ function fillZoneEvalInfo(zoneId) {
   }
 }
 
+function selectedFeatureCollection() {
+  return selectedZoneId ? { type: "FeatureCollection", features: zoneFeatures([selectedZoneId]) } : EMPTY_FC;
+}
+
 function highlightSelectedZone(zoneId) {
-  if (selectedLayer) { map.removeLayer(selectedLayer); selectedLayer = null; }
-  if (!zonesGeoJSON) return;
-  const feat = zonesGeoJSON.features.find(f => String(f.properties.zone_id) === String(zoneId));
-  if (!feat) return;
-  selectedLayer = L.geoJSON(feat, {
-    style: { fill: false, color: "#4f8cff", weight: 3, dashArray: "5 3" },
-    interactive: false,
-  }).addTo(map);
+  if (mapReady) map.getSource("selected").setData(selectedFeatureCollection());
 }
 
 function closeZoneInfo() {
   selectedZoneId = null;
   const card = document.getElementById("zone-info-card");
   if (card) card.style.display = "none";
-  if (selectedLayer) { map.removeLayer(selectedLayer); selectedLayer = null; }
+  if (mapReady) map.getSource("selected").setData(EMPTY_FC);
 }
 
 // ============================================================
